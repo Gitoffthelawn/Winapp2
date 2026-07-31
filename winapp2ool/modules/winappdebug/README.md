@@ -185,7 +185,7 @@ A few checks depend on winapp2ool's global **Flavor** setting (found in the Wina
 
 # Detected Errors
 
-The messages below are the exact strings printed in the error report. **Bold** messages are corrected automatically when their category's repair is enabled; plain messages are reported only and must be fixed by hand. The category in brackets is the [Scan Settings](#scan-settings) entry that governs the check — except for those marked *(always on)*, which run whether or not you have disabled anything.
+The messages below are the exact strings printed in the error report. **Bold** messages are corrected automatically when their category's repair is enabled; plain messages are reported only and must be fixed by hand. The category in brackets is the [Scan Settings](#scan-settings) entry that governs the check, except for those marked *(always on)*.
 
 ### Entry structure
 

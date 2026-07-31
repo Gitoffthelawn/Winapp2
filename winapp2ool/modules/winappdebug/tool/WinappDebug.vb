@@ -29,11 +29,11 @@ Public Module WinappDebug
     Public Property ErrorsFound As Integer = 0
 
     ''' <summary>
-    ''' The error report from the most recent Lint run, as rendered to the console.
-    ''' Populated by <c> EmitEntryResult </c> and <c> EmitEntryAlphabetizationErrors </c>,
-    ''' both of which run on the orchestrating thread after the parallel per-entry pass,
-    ''' so no synchronization is required. Empty when the last run found no errors,
-    ''' which is what gates the Log Viewer option in the module's menu
+    ''' The error report from the most recent lint, as it was printed to the console.
+    ''' <c> EmitEntryResult </c> and <c> EmitEntryAlphabetizationErrors </c> both write here
+    ''' from the orchestrating thread once the parallel pass is done, so this needs no
+    ''' locking. Stays empty when the run found no errors, which is how the menu decides
+    ''' whether to offer the Log Viewer option
     ''' </summary>
     Public Property MostRecentLintLog As New System.Text.StringBuilder
 
@@ -212,10 +212,10 @@ Public Module WinappDebug
         "RootDir", "SystemDrive", "SystemRoot", "Temp", "Tmp", "UserName", "UserProfile", "Video", "WinDir"}
 
     ''' <summary>
-    ''' Anchored case-sensitive regex matching a (possibly broken) env-var prefix:
-    ''' optional <c> % </c>, env var name, optional <c> % </c>, then <c> \ </c>.
-    ''' Used by <c> fixBrokenEnVars </c> to detect missing leading and/or trailing percent signs
-    ''' in a single pass instead of looping over all 22 env var names.
+    ''' Case sensitive regex for an env var prefix that may be missing its percent signs:
+    ''' an optional <c> % </c>, the variable name, another optional <c> % </c>, then a <c> \ </c>.
+    ''' <c> fixBrokenEnVars </c> uses this so it can catch a missing leading or trailing %
+    ''' in one pass rather than looping over all 22 names.
     ''' </summary>
     Private ReadOnly enVarBrokenPrefix As New Regex(
         "^(%?)(" & String.Join("|", EnVars) & ")(%?)\\",
@@ -228,40 +228,40 @@ Public Module WinappDebug
         "FileKey", "LangSecRef", "RegKey", "Section", "SpecialDetect", "Warning"}
 
     ''' <summary>
-    ''' Valid <c> SpecialDetect </c> values, properly cased. Used by <c> chkCasing </c>
-    ''' to detect and repair casing errors in <c> SpecialDetect </c> values.
+    ''' Valid <c> SpecialDetect </c> values, properly cased. <c> chkCasing </c> uses these to
+    ''' find and fix casing errors in <c> SpecialDetect </c> values.
     ''' </summary>
     Private ReadOnly SpecialDetectVals As String() = {"DET_CHROME", "DET_MOZILLA", "DET_THUNDERBIRD", "DET_OPERA"}
 
     ''' <summary>
-    ''' Case-insensitive lookup of valid env var names → canonically-cased form.
-    ''' Built once at module init; <c> chkCasing </c> uses this in place of an O(n) array scan.
+    ''' Maps valid env var names to their properly cased form, case insensitively. Built once
+    ''' at module init so <c> chkCasing </c> doesn't have to scan the whole array each time.
     ''' </summary>
     Private ReadOnly EnVarsLookup As Dictionary(Of String, String) = BuildCasedLookup(EnVars)
 
     ''' <summary>
-    ''' Case-insensitive lookup of valid winapp2.ini key types → canonically-cased form.
+    ''' Maps valid winapp2.ini key types to their properly cased form, case insensitively.
     ''' </summary>
     Private ReadOnly ValidCmdsLookup As Dictionary(Of String, String) = BuildCasedLookup(ValidCmds)
 
     ''' <summary>
-    ''' Case-insensitive lookup of valid <c> SpecialDetect </c> values → canonically-cased form.
+    ''' Maps valid <c> SpecialDetect </c> values to their properly cased form, case insensitively.
     ''' </summary>
     Private ReadOnly SpecialDetectLookup As Dictionary(Of String, String) = BuildCasedLookup(SpecialDetectVals)
 
     ''' <summary>
-    ''' Comma-separated joins of the valid-value lists, precomputed for use in
-    ''' the "Invalid data provided" diagnostic message rendered by <c> chkCasing </c>.
+    ''' The valid value lists, joined up ahead of time for the "Invalid data provided"
+    ''' message that <c> chkCasing </c> prints.
     ''' </summary>
     Private ReadOnly EnVarsJoined As String = String.Join(", ", EnVars)
     Private ReadOnly ValidCmdsJoined As String = String.Join(", ", ValidCmds)
     Private ReadOnly SpecialDetectJoined As String = String.Join(", ", SpecialDetectVals)
 
     ''' <summary>
-    ''' Builds a case-insensitive (OrdinalIgnoreCase) dictionary mapping each entry of
-    ''' <paramref name="cased"/> to itself, used as the canonical-cased form lookup for
-    ''' <c> chkCasing </c>. Entries whose case-folded form already exists are skipped to
-    ''' tolerate any future duplicate-but-cased-differently entries gracefully.
+    ''' Builds the OrdinalIgnoreCase dictionary <c> chkCasing </c> uses to find the properly
+    ''' cased form of a value, mapping each item in <paramref name="cased"/> to itself.
+    ''' Items that differ from one already in the dictionary only by case get skipped, so
+    ''' adding one later won't throw.
     ''' </summary>
     Private Function BuildCasedLookup(cased As String()) As Dictionary(Of String, String)
         Dim out As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
@@ -479,7 +479,8 @@ Public Module WinappDebug
 
     ''' <summary>
     ''' Collects the errors from an <c>EntryLintResult</c> into <c>MenuSection</c>s, logs them,
-    ''' and adds its error count to <c>ErrorsFound</c>. Returns sections for deferred rendering.
+    ''' and adds its error count to <c>ErrorsFound</c>. The sections come back to be rendered
+    ''' later.
     ''' </summary>
     '''
     ''' <param name="result">
@@ -644,20 +645,20 @@ Public Module WinappDebug
     ''' </param>
     Private Sub ValidateKeys(result As EntryLintResult, entry As winapp2entry2)
 
-        ' Run cValidity on all non-error buckets; remove failures
+        ' Run cValidity over the normal buckets and drop anything that fails
         For i = 0 To entry.KeyLists.Count - 2
             For Each key In entry.KeyLists(i).Where(Function(k) Not cValidity(result, k)).ToList()
                 entry.RemoveKey(key)
             Next
         Next
 
-        ' Run cValidity on error keys; force-remove failures
-        ' (KeyType may have changed during partial repair, so normal routing would be wrong)
+        ' Same for the error keys, except these have to be force removed. A partial repair
+        ' may have changed the KeyType out from under the normal routing
         For Each key In entry.ErrorKeys.Where(Function(k) Not cValidity(result, k)).ToList()
             entry.ForceRemoveErrorKey(key)
         Next
 
-        ' Promote error keys whose KeyType is now a recognised winapp2.ini type
+        ' Anything we managed to repair into a real winapp2.ini key type goes back in a bucket
         entry.ReclassifyErrorKeys()
 
     End Sub
@@ -704,8 +705,8 @@ Public Module WinappDebug
     End Function
 
     ''' <summary>
-    ''' Renders entry-level alphabetization misplacements into <c>MenuSection</c>s and the global log,
-    ''' incrementing <c>ErrorsFound</c> for each
+    ''' Renders entry level alphabetization misplacements into <c>MenuSection</c>s and the
+    ''' global log, and bumps <c>ErrorsFound</c> for each one
     ''' </summary>
     '''
     ''' <param name="misplacements">
@@ -781,7 +782,7 @@ Public Module WinappDebug
     ''' <summary>
     ''' Returns the items from <paramref name="someList"/> that are out of order with respect
     ''' to <paramref name="sortedList"/>, paired with their actual and expected positions.
-    ''' Reporting is the caller's responsibility.
+    ''' It's up to the caller to report them.
     ''' </summary>
     '''
     ''' <param name="someList">
@@ -802,10 +803,10 @@ Public Module WinappDebug
             sortedIndices(sortedList.Items(i)) = i
         Next
 
-        ' Build the sequence of each item's position in the sorted list,
-        ' then find which actual-list indices form the LIS. Entries outside
-        ' the LIS are the minimal set that is genuinely out of place; the
-        ' rest are just displaced by those entries and should not be reported.
+        ' Line up each item's position in the sorted list, then work out which of the
+        ' actual-list indices form the LIS. Whatever falls outside the LIS is the smallest
+        ' set of things actually out of place. Everything else is just getting shoved
+        ' around by those, so there's no point reporting it.
         Dim sortedPosSequence As New List(Of Integer)
         For Each item In someList.Items
             sortedPosSequence.Add(sortedIndices(item))
@@ -832,8 +833,8 @@ Public Module WinappDebug
     End Function
 
     ''' <summary>
-    ''' Returns the set of indices (into <paramref name="sequence"/>) that form its Longest Increasing Subsequence.
-    ''' Entries whose indices are absent are the minimal set that is out of order.
+    ''' Returns the set of indices (into <paramref name="sequence"/>) that form its Longest
+    ''' Increasing Subsequence. Anything whose index is missing from that set is out of order.
     ''' </summary>
     '''
     ''' <param name="sequence">
@@ -887,8 +888,8 @@ Public Module WinappDebug
     End Function
 
     ''' <summary>
-    ''' Per-call configuration for <c>processKeyList</c>, encoding the type-specific
-    ''' behaviour that was formerly dispatched via a <c>Select Case keyType</c> string comparison.
+    ''' The per-call configuration for <c>processKeyList</c>, holding the behaviour that
+    ''' varies by key type.
     ''' </summary>
     Private Structure KeyListSpec
 
@@ -956,9 +957,9 @@ Public Module WinappDebug
         If bucket.Count = 0 Then Return
 
         Dim curNum = 1
-        ' Skip dupe-tracking allocation for singleton buckets (no duplicates possible
-        ' with one key) and when the user has both disabled scanning AND repair for the
-        ' duplicate-values rule — in that case nothing reads or writes this dictionary.
+        ' Don't bother allocating the dupe tracker for a bucket holding one key, since there's
+        ' nothing to duplicate, or when the user has turned off both the scan and the repair
+        ' for duplicate values. 
         Dim seenValues As Dictionary(Of String, iniKey2) = Nothing
         Dim dupeKeys As List(Of iniKey2) = Nothing  ' lazily allocated on first duplicate
         If bucket.Count > 1 AndAlso (lintDupes.ShouldScan OrElse lintDupes.fixFormat) Then
@@ -979,7 +980,6 @@ Public Module WinappDebug
 
             cFormat(result, key, curNum, seenValues, dupeKeys, spec.NoNumbers)
 
-            ' SpecialDetect and LangSecRef carry additional per-key checks; key.typeIs() guards them
             If key.typeIs("SpecialDetect") Then chkCasing(result, key, SpecialDetectLookup, SpecialDetectJoined, key.Value)
             fullKeyErr(result, key, "LangSecRef holds an invalid value.", lintInvalid.ShouldScan AndAlso key.typeIs("LangSecRef") AndAlso Not secRefNums.IsMatch(key.Value))
 
@@ -1029,8 +1029,8 @@ Public Module WinappDebug
     ''' </param>
     '''
     ''' <param name="seenValues">
-    ''' A map of already-observed key values to their first-seen <c> iniKey2 </c>, used to detect duplicates.
-    ''' Storing the key reference defers the <c> ToString() </c> allocation to the rare duplicate-report path.
+    ''' A map of the key values we've seen so far to the first <c> iniKey2 </c> that held each
+    ''' one, used to spot duplicates.
     ''' </param>
     '''
     ''' <param name="dupeKeys">
@@ -1047,8 +1047,6 @@ Public Module WinappDebug
                         ByRef dupeKeys As List(Of iniKey2),
                         Optional noNumbers As Boolean = False)
 
-        ' Check for duplicates. seenValues is Nothing for singleton buckets
-        ' (the caller skips the dict allocation since dupes are impossible with one key).
         If seenValues IsNot Nothing Then
 
             Dim firstSeen As iniKey2 = Nothing
@@ -1129,7 +1127,6 @@ Public Module WinappDebug
         Dim enVar = m.Groups(2).Value
         Dim hasTrailing = m.Groups(3).Value = "%"
 
-        ' If the env var is properly bracketed, no repair is needed
         If hasLeading AndAlso hasTrailing Then Return
 
         Dim msg As String
@@ -1322,7 +1319,7 @@ Public Module WinappDebug
                           casedJoined As String,
                           strToChk As String)
 
-        ' Get the properly cased string via O(1) dict lookup; if no match, the value is invalid
+        ' Look up the properly cased string. If it isn't in there, the value is invalid
         Dim casedString As String = Nothing
         Dim found = casedLookup.TryGetValue(strToChk, casedString)
         If Not found Then casedString = strToChk
@@ -1629,8 +1626,7 @@ Public Module WinappDebug
 
         Dim sortedKeyValues = replaceAndSort(keyValues, "|", " \ \")
 
-        ' Fast-path: if the bucket is already in sorted order and no keys were removed,
-        ' skip the expensive LIS check — nothing to report and nothing to rewrite
+        ' If the bucket is already sorted and nothing got removed, there's nothing to report and nothing to rewrite
         If Not hadDuplicatesRemoved Then
             Dim alreadySorted = True
             For i = 0 To keyValues.Count - 1
@@ -1730,7 +1726,7 @@ Public Module WinappDebug
                            err As String,
                   Optional cond As Boolean = True,
                   Optional repCond As Boolean = False,
-                  Optional ByRef repairVal As String = "",
+            Optional ByRef repairVal As String = "",
                   Optional newVal As String = "")
 
         If Not cond Then Return
@@ -1741,18 +1737,17 @@ Public Module WinappDebug
     End Sub
 
     ''' <summary>
-    ''' Lazy variant of <c> fullKeyErr </c>: <paramref name="newValFactory"/> is invoked
-    ''' only when <paramref name="cond"/> AndAlso <paramref name="repCond"/> are both true.
-    ''' Use this when computing the replacement string is expensive
-    ''' (e.g. <c> key.Value.Replace(...) </c>) and would otherwise allocate per key
-    ''' regardless of whether the repair fires.
+    ''' Lazy version of <c> fullKeyErr </c>. <paramref name="newValFactory"/> only runs when
+    ''' both <paramref name="cond"/> and <paramref name="repCond"/> are true. Worth using
+    ''' where building the replacement costs something, like <c> key.Value.Replace(...) </c>,
+    ''' which would otherwise allocate for every key whether or not the repair fires.
     ''' </summary>
     Private Sub fullKeyErr(result As EntryLintResult,
                            key As iniKey2,
                            err As String,
                            cond As Boolean,
                            repCond As Boolean,
-                  ByRef repairVal As String,
+                     ByRef repairVal As String,
                            newValFactory As Func(Of String))
 
         If Not cond Then Return
@@ -1789,9 +1784,9 @@ Public Module WinappDebug
     End Sub
 
     ''' <summary>
-    ''' Lazy variant of <c> fixStr </c>: <paramref name="newValueFactory"/> is invoked
-    ''' only when <paramref name="param"/> is true. Avoids allocating the replacement
-    ''' string at call sites where the repair is gated.
+    ''' Lazy version of <c> fixStr </c>. <paramref name="newValueFactory"/> only runs when
+    ''' <paramref name="param"/> is true, so a gated call site doesn't allocate a replacement
+    ''' string it's never going to use.
     ''' </summary>
     Private Sub fixStr(param As Boolean,
                  ByRef currentValue As String,

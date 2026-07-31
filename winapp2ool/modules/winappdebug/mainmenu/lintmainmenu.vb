@@ -23,9 +23,7 @@ Option Strict On
 Module lintmainmenu
 
     ''' <summary>
-    ''' Builds the WinappDebug main menu with all options and their dispatch handlers registered inline.
-    ''' Called by both <c> printLintMainMenu </c> (to render) and <c> handleLintUserInput </c>
-    ''' (to dispatch), so the displayed option numbers and the dispatch table are always in sync.
+    ''' Builds the WinappDebug main menu
     ''' </summary>
     Private Function buildLintMenu() As MenuSection
 

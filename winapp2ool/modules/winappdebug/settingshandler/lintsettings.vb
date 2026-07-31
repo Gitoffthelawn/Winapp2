@@ -25,7 +25,7 @@ Public Module lintsettings
 
     ''' <summary>
     ''' The save path for the linted file
-    ''' <br /> Default: <c> winapp2-debugged.ini </c> in the current directory — the input file is not overwritten unless explicitly selected as the save target
+    ''' <br /> Default: <c> winapp2-debugged.ini </c> in the current directory
     ''' </summary>
     Public Property winappDebugFile3 As New iniFileChooser(Environment.CurrentDirectory, "winapp2-debugged.ini", "winapp2-debugged.ini", mustExist:=False)
 
@@ -71,11 +71,11 @@ Public Module lintsettings
     Public Property expectedDefaultValue As Boolean = False
 
     ''' <summary>
-    ''' Indicates that existing Default keys should be preserved as-is rather than removed by the
-    ''' Defaults rule. Set by the <c> -keepdefaults </c> CLI flag for flavors that deliberately
-    ''' manage Default values (eg. FluentCleaner, which adds <c> Default=False </c> to browser
-    ''' scaffolds). Independent of <c> overrideDefaultVal </c>: this only suppresses removal of and
-    ''' complaints about existing keys, it does not audit their values or require them to exist
+    ''' Indicates that existing Default keys should be left alone rather than removed by the
+    ''' Defaults rule. The <c> -keepdefaults </c> CLI flag sets it, for flavors that manage
+    ''' their own Default values (eg. FluentCleaner). This has nothing to do with 
+    ''' <c> overrideDefaultVal </c>. It only stops us removing or complaining about keys that
+    ''' are already there, it doesn't check their values and it doesn't require them to exist
     ''' <br/> Default: <c> False </c>
     ''' </summary>
     Public Property PreserveDefaultKeys As Boolean = False

@@ -42,8 +42,8 @@ End Structure
 
 ''' <summary>
 ''' Accumulates errors found while linting a single <c>winapp2entry2</c>. <br/>
-''' Each entry processed by <c>WinappDebug</c> gets its own <c>EntryLintResult</c>,
-''' making per-entry processing independent of shared state.
+''' Every entry <c>WinappDebug</c> processes gets its own, so no part of the per-entry
+''' work has to reach for shared state.
 ''' </summary>
 Public Class EntryLintResult
 
@@ -99,14 +99,15 @@ Public Class EntryLintResult
     End Sub
 
     ''' <summary>
-    ''' Log lines captured by <c>gLogCapture</c> during parallel processing of this entry.
-    ''' Flushed in deterministic order via <c>EmitCaptured</c> when the result is rendered.
+    ''' Log lines <c>gLogCapture</c> picked up while this entry was being processed in
+    ''' parallel. <c>EmitCaptured</c> flushes them in a deterministic order when the result
+    ''' gets rendered.
     ''' </summary>
     '''
     ''' <remarks>
-    ''' The producer (<c>WinappDebug.ProcessEntry</c>) opens a capture scope, runs the entry's
-    ''' lint pipeline, then assigns the captured <c>Lines</c> here. The consumer
-    ''' (<c>WinappDebug.EmitEntryResult</c>) flushes them under the calling thread's depth.
+    ''' <c>WinappDebug.ProcessEntry</c> opens a capture scope, runs the entry through the
+    ''' lint pipeline, then drops the captured <c>Lines</c> in here.
+    ''' <c>WinappDebug.EmitEntryResult</c> flushes them back out at the calling thread's depth.
     ''' </remarks>
     Public Property LogLines As IReadOnlyList(Of String) = New List(Of String)()
 

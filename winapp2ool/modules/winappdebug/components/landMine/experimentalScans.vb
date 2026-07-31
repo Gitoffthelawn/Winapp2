@@ -18,9 +18,9 @@
 Option Strict On
 
 ''' <summary>
-''' One survivor in the FileKey merge pass. Holds the parsed components of the
-''' first-seen key for a given (path, flag) combination and the running list of
-''' merged patterns from any subsequent keys that get folded into it.
+''' One survivor of the FileKey merge pass. Holds the parsed pieces of the first key seen
+''' for a given (path, flag) pair, plus the running pattern list from anything folded into
+''' it afterwards.
 ''' </summary>
 Friend Class fileKeySurvivor
 
@@ -38,8 +38,7 @@ Friend Class fileKeySurvivor
 End Class
 
 ''' <summary>
-''' Holds scans and repairs for <c> WinappDebug </c> that are disabled by default —
-''' either incomplete or out of scope for the normal lint process.
+''' Holds the scans and repairs for <c> WinappDebug </c> that are off by default.
 ''' </summary>
 Module experimentalScans
 
@@ -50,10 +49,10 @@ Module experimentalScans
     ''' </summary>
     '''
     ''' <remarks>
-    ''' Each FileKey value is parsed exactly once via <c>fileKeyParams2</c>. Match
-    ''' lookup is O(1) by (path, flag) — chained merges into the same survivor do
-    ''' not rebuild or re-parse the running value. The merged value string is
-    ''' constructed once per survivor at the end, when output keys are emitted.
+    ''' Every FileKey value is parsed once through <c>fileKeyParams2</c> and matched by
+    ''' (path, flag) in O(1). Merging several keys into the same survivor never rebuilds or
+    ''' re-parses the running value. Each survivor's merged value string gets built once at
+    ''' the end, when the output keys are emitted.
     ''' </remarks>
     '''
     ''' <param name="entry">
@@ -76,8 +75,8 @@ Module experimentalScans
 
             If indexByKey.TryGetValue(hashKey, idx) Then
 
-                ' Path+flag match: fold this key's patterns into the survivor and
-                ' record the original key for removal.
+                ' The path and flag both match, so fold this key's patterns into the
+                ' survivor and mark the original for removal
                 survivors(idx).Patterns.AddRange(parsed.Patterns)
                 removedKeys.Add(key)
                 gLog($"{key} has a path that matches another key")

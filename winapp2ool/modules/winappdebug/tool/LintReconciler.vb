@@ -20,54 +20,52 @@ Option Strict On
 Imports System.IO
 
 ''' <summary>
-''' Guards the generative modules' <see cref="WinappDebug.remotedebug"/> normalization pass
-''' with a semantic reconciliation: the optimization pass is only permitted to make
-''' formatting-level changes (key reordering and renumbering, FileKey pattern-list
-''' alphabetization, and merging FileKeys that share a path and flag). Any change that
-''' loses or rewrites cleaning content — a dropped entry, a discarded malformed key, a
-''' rewritten value — indicates the generator emitted invalid data, which the linter then
-''' silently destroyed. That is a correctness bug in the generator or its sources, not a
-''' cleanup, so the gate reports every such difference, dumps the pre-optimization file
-''' next to the output for forensics, and fails the build (nonzero exit code) in scripted
-''' use. <br /><br />
+''' Guards the generative modules' <see cref="WinappDebug.remotedebug"/> normalization pass.
+''' The optimization pass is only allowed to change formatting: reordering and renumbering
+''' keys, alphabetizing a FileKey's pattern list, and merging FileKeys that share a path and
+''' flag. Anything that loses or rewrites real cleaning content, whether that's a dropped
+''' entry, a discarded malformed key, or a rewritten value, means the generator emitted
+''' invalid data and the linter quietly ate it. That's a bug in the generator or its sources
+''' rather than a cleanup, so the gate reports every difference it finds, dumps the
+''' pre-optimization file beside the output so it can be picked apart later, and fails
+''' scripted builds with a nonzero exit code. <br /><br />
 '''
-''' The comparison decomposes each entry into a set of <em>semantic units</em>:
-''' each FileKey contributes one <c> path|pattern|flag </c> triple per semicolon-delimited
-''' pattern (via <see cref="fileKeyParams2"/>), and every other key contributes its
-''' number-stripped <c> KeyType=Value </c> pair. Units are compared case-insensitively as
-''' sets, which makes the three sanctioned optimization classes invisible by construction:
-''' reordering and renumbering do not change set membership, pattern sorting does not
-''' change the triple set, and a merge of two same-path FileKeys produces exactly the
-''' union of their triples. Everything else — in either direction — is reported.
-''' Detection is default-deny: a future lint rule that changes semantics will fire this
-''' gate until its behavior is explicitly accounted for. <br /><br />
+''' The comparison breaks each entry down into <em>semantic units</em>. Every FileKey gives
+''' one <c> path|pattern|flag </c> triple per semicolon-delimited pattern (via
+''' <see cref="fileKeyParams2"/>), and every other key gives its number-stripped
+''' <c> KeyType=Value </c> pair. Units are compared case-insensitively as sets, which is why
+''' the three sanctioned optimizations don't show up here: reordering and renumbering leave
+''' set membership alone, sorting patterns leaves the triple set alone, and merging two
+''' same-path FileKeys gives exactly the union of their triples. Anything else gets reported,
+''' in either direction. The gate assumes the worst, so a future lint rule that changes
+''' semantics will keep tripping it until somebody sits down and works out what it's
+''' actually doing to the output. <br /><br />
 '''
-''' Reporting (but never detection) pairs a lost unit with a gained unit into a single
-''' <c> old → new </c> rewrite finding when the pairing is unambiguous: FileKey triples
-''' that agree on two of their three components, or any other key type with exactly one
-''' lost and one gained unit. Anything that cannot be paired one-for-one stays reported
-''' as separate lost/gained findings.
+''' When reporting, though never when detecting, a lost unit and a gained unit are folded
+''' into one <c> old → new </c> rewrite finding if the pairing is unambiguous: FileKey triples
+''' agreeing on two of their three components, or any other key type carrying exactly one
+''' lost and one gained unit. Whatever can't be paired one for one stays reported separately.
 ''' </summary>
 Public Module LintReconciler
 
     ''' <summary>
     ''' Runs <see cref="WinappDebug.remotedebug"/> with full optimizations over
-    ''' <paramref name="givenIni"/> and reconciles the result against the input.
-    ''' When the pass made only formatting-level changes, behaves exactly like
-    ''' <c> remotedebug(givenIni, True) </c>. When semantic differences are found,
-    ''' writes the pre-optimization content to <c> &lt;name&gt;.prelint.ini </c>
-    ''' alongside the output, reports every difference, and sets a nonzero process
-    ''' exit code so scripted builds fail.
+    ''' <paramref name="givenIni"/> and reconciles the result against what went in.
+    ''' If the pass only changed formatting, this does exactly what
+    ''' <c> remotedebug(givenIni, True) </c> does. If it changed anything semantic, the
+    ''' pre-optimization content goes to <c> &lt;name&gt;.prelint.ini </c> beside the output,
+    ''' every difference gets reported, and the process exit code goes nonzero so a scripted
+    ''' build fails.
     ''' </summary>
     '''
     ''' <param name="givenIni">
-    ''' The generated <c> iniFile2 </c> to normalize; its <c> Dir </c> and <c> Name </c>
-    ''' determine where the forensic pre-lint dump is written on gate failure
+    ''' The generated <c> iniFile2 </c> to normalize. Its <c> Dir </c> and <c> Name </c> decide
+    ''' where the pre-lint dump lands when the gate fails
     ''' </param>
     '''
     ''' <param name="callingModule">
-    ''' The generative module's name, embedded in gate messages for source-of-warning
-    ''' localisation
+    ''' The generative module's name, which goes into the gate messages so you can tell
+    ''' where a warning came from
     ''' </param>
     '''
     ''' <param name="menuOutput">
@@ -76,7 +74,7 @@ Public Module LintReconciler
     '''
     ''' <returns>
     ''' The normalized <c> iniFile2 </c>, exactly as <see cref="WinappDebug.remotedebug"/>
-    ''' returns it (the gate reports but does not roll back)
+    ''' returns it. The gate reports, it doesn't roll anything back
     ''' </returns>
     Public Function remotedebugGuarded(givenIni As iniFile2,
                                        callingModule As String,
@@ -84,9 +82,8 @@ Public Module LintReconciler
 
         If givenIni Is Nothing Then argIsNull(NameOf(givenIni)) : Return Nothing
 
-        ' Capture the pre-lint state up front: remotedebug wraps the given file's sections
-        ' by reference, so both the forensic dump and the unit set must be taken before
-        ' the pass runs
+        ' Grab the pre-lint state first. remotedebug wraps the given file's sections by
+        ' reference, so the dump and the unit set both have to come off it before the pass runs
         Dim preText = givenIni.ToString()
         Dim preUnits = CollectSemanticUnits(givenIni)
 
@@ -124,8 +121,8 @@ Public Module LintReconciler
 
             End Try
 
-            ' Nonzero exit fails the scripted build pipeline; interactive runs surface the
-            ' warnings above and are otherwise unaffected
+            ' A nonzero exit fails the scripted build. Interactive runs just show the
+            ' warnings above and carry on as normal
             Environment.ExitCode = 1
 
         End Using
@@ -135,10 +132,10 @@ Public Module LintReconciler
     End Function
 
     ''' <summary>
-    ''' Decomposes every entry of <paramref name="sourceFile"/> into its semantic units.
-    ''' The outer dictionary is keyed by entry name; each inner dictionary maps a
-    ''' case-normalized unit (the comparison key) to its display form (used in gate
-    ''' messages).
+    ''' Breaks every entry of <paramref name="sourceFile"/> down into its semantic units.
+    ''' The outer dictionary is keyed by entry name. Each inner one maps a case-normalized
+    ''' unit to its display form. We compare on the former and print the latter in the gate
+    ''' messages.
     ''' </summary>
     '''
     ''' <param name="sourceFile">
@@ -162,8 +159,8 @@ Public Module LintReconciler
 
                 For Each unit In UnitsForKey(key)
 
-                    ' Exact duplicates collapse here by design: deduplication is a
-                    ' sanctioned, semantics-preserving optimization
+                    ' Exact duplicates collapse here on purpose, since throwing them out
+                    ' is one of the optimizations we allow
                     entryUnits(unit) = unit
 
                 Next
@@ -180,11 +177,11 @@ Public Module LintReconciler
 
     ''' <summary>
     ''' Compares the pre- and post-optimization unit maps and describes every semantic
-    ''' difference: entries removed outright, units present before the pass but not after
-    ''' (lost content), and units present after but not before (invented or rewritten
-    ''' content). A lost/gained pair that corresponds unambiguously is reported as a
-    ''' single <c> old → new </c> rewrite finding; everything else stays reported as
-    ''' separate lost and gained findings.
+    ''' difference it finds: entries that were removed outright, units that were there
+    ''' before the pass but not after, and units that turned up afterwards without having
+    ''' been there to start with. Where a lost and a gained unit clearly correspond, they're
+    ''' reported as one <c> old → new </c> rewrite. Everything else is reported as a plain
+    ''' loss or gain.
     ''' </summary>
     '''
     ''' <param name="preUnits">
@@ -231,10 +228,10 @@ Public Module LintReconciler
     End Function
 
     ''' <summary>
-    ''' Describes the semantic differences within a single entry. The lost and gained
-    ''' unit sets are computed exactly as before (detection is unchanged), then a
-    ''' reporting-only pairing pass promotes unambiguous lost/gained pairs into single
-    ''' rewrite findings; whatever remains unpaired is reported as lost or gained.
+    ''' Describes the semantic differences inside a single entry. The lost and gained sets
+    ''' get worked out first, then a pairing pass folds the obvious lost/gained pairs into
+    ''' single rewrite findings. That pairing only affects how things are reported, never
+    ''' what gets detected. Anything left unpaired is reported as a plain loss or gain.
     ''' </summary>
     '''
     ''' <param name="entryName">
@@ -296,14 +293,13 @@ Public Module LintReconciler
     End Function
 
     ''' <summary>
-    ''' Pairs lost units with gained units where the correspondence is unambiguous,
-    ''' removing paired units from <paramref name="lost"/> and <paramref name="gained"/>
-    ''' in place. FileKey triples pair when exactly one lost and one gained triple agree
-    ''' on two of their three components — the disagreeing third is the rewrite — with
-    ''' the most specific passes running first so a flag change is not misread as a
-    ''' pattern change. Every other unit pairs when its KeyType carries exactly one lost
-    ''' and one gained instance. Ambiguous groups (more than one candidate on either
-    ''' side) are left untouched.
+    ''' Pairs up lost and gained units where the correspondence is obvious, dropping whatever
+    ''' it pairs from <paramref name="lost"/> and <paramref name="gained"/> in place. Two
+    ''' FileKey triples pair when exactly one lost and one gained triple agree on two of their
+    ''' three components. The third one, the one they disagree on, is the rewrite. The most
+    ''' specific passes run first so that a flag change doesn't get read as a pattern change.
+    ''' Every other unit pairs when its KeyType has exactly one lost and one gained instance.
+    ''' If there's more than one candidate on either side we leave the whole group alone.
     ''' </summary>
     '''
     ''' <param name="lost">
@@ -334,10 +330,9 @@ Public Module LintReconciler
 
     ''' <summary>
     ''' Groups <paramref name="lost"/> and <paramref name="gained"/> by
-    ''' <paramref name="bucketFor"/> and records a (old, new) pair for every bucket
-    ''' holding exactly one unit on each side, removing both from their lists.
-    ''' Units for which <paramref name="bucketFor"/> returns <c> Nothing </c> do not
-    ''' participate in this pass.
+    ''' <paramref name="bucketFor"/> and records an (old, new) pair for every bucket holding
+    ''' exactly one unit on each side, pulling both out of their lists as it goes. A unit
+    ''' whose <paramref name="bucketFor"/> comes back <c> Nothing </c> sits this pass out.
     ''' </summary>
     '''
     ''' <param name="lost">
@@ -414,11 +409,11 @@ Public Module LintReconciler
     End Function
 
     ''' <summary>
-    ''' Builds a comparison bucket from a FileKey triple unit by keeping the selected
-    ''' components and masking the rest, so units disagreeing only on masked components
-    ''' land in the same bucket. Returns <c> Nothing </c> for non-triple units (including
-    ''' the malformed-FileKey fallback form, which carries an <c> = </c> instead of a
-    ''' space and is bucketed by KeyType like any other unit).
+    ''' Builds a comparison bucket out of a FileKey triple, keeping the components asked for
+    ''' and masking the rest, so two units that only disagree on a masked component land in
+    ''' the same bucket. Anything that isn't a triple gets <c> Nothing </c> back. That includes
+    ''' the malformed-FileKey fallback form, which carries an <c> = </c> rather than a space
+    ''' and is bucketed by KeyType like everything else.
     ''' </summary>
     '''
     ''' <param name="unit">
@@ -450,16 +445,16 @@ Public Module LintReconciler
         Dim parts = unit.Substring("FileKey ".Length).Split("|"c)
         If parts.Length <> 3 Then Return Nothing
 
-        ' Pipes cannot appear inside path, pattern, or flag, and the mask position is
-        ' constant within a pass, so this composite key cannot collide across units
+        ' A pipe can't appear inside a path, pattern, or flag, and the mask position doesn't
+        ' move within a pass, so this composite key can't collide across units
         Return $"{If(keepPath, parts(0), "*")}|{If(keepPattern, parts(1), "*")}|{If(keepFlag, parts(2), "*")}"
 
     End Function
 
     ''' <summary>
-    ''' Builds a comparison bucket from a <c> KeyType=Value </c> unit: its KeyType.
-    ''' Returns <c> Nothing </c> for FileKey triple units, which are paired component-wise
-    ''' by <see cref="TripleBucket"/> instead.
+    ''' The bucket for a <c> KeyType=Value </c> unit is just its KeyType. FileKey triples get
+    ''' <c> Nothing </c> back, since <see cref="TripleBucket"/> pairs those component by
+    ''' component instead.
     ''' </summary>
     '''
     ''' <param name="unit">
@@ -480,11 +475,11 @@ Public Module LintReconciler
     End Function
 
     ''' <summary>
-    ''' Produces the semantic units for one key. A FileKey yields one
-    ''' <c> path|pattern|flag </c> triple per pattern so that pattern reordering and
-    ''' same-path merges are invisible to set comparison; a FileKey whose value parses to
-    ''' zero patterns falls back to the whole raw value so malformed keys cannot vanish
-    ''' silently. Every other key type yields its number-stripped
+    ''' Produces the semantic units for one key. A FileKey gives one
+    ''' <c> path|pattern|flag </c> triple per pattern, so that reordering patterns or merging
+    ''' two same-path keys never shows up in the comparison. If a FileKey's value parses to no
+    ''' patterns at all we fall back to the whole raw value, so a malformed key can't quietly
+    ''' disappear on us. Every other key type gives its number-stripped
     ''' <c> KeyType=Value </c> pair.
     ''' </summary>
     '''
@@ -493,8 +488,8 @@ Public Module LintReconciler
     ''' </param>
     '''
     ''' <returns>
-    ''' The display-form unit strings for <paramref name="key"/> (comparison uses a
-    ''' case-insensitive dictionary, so no separate normalization is required)
+    ''' The display-form unit strings for <paramref name="key"/>. The comparison runs through
+    ''' a case-insensitive dictionary, so we don't normalize them separately
     ''' </returns>
     Private Function UnitsForKey(key As iniKey2) As List(Of String)
 
@@ -516,9 +511,9 @@ Public Module LintReconciler
 
         End If
 
-        ' RawFlag holds only unrecognized flag text — RECURSE/REMOVESELF land in the Flag
-        ' enum with an empty RawFlag, so the unit must encode the effective flag or the
-        ' comparison goes blind to recursion-scope changes
+        ' RawFlag only holds flag text we didn't recognize. RECURSE and REMOVESELF land in
+        ' the Flag enum and leave RawFlag empty, so the unit has to carry the effective flag
+        ' or the comparison goes blind to changes in recursion scope
         Dim flagText = EffectiveFlagText(params)
 
         For Each pattern In params.Patterns
@@ -532,9 +527,9 @@ Public Module LintReconciler
     End Function
 
     ''' <summary>
-    ''' Produces the flag component of a FileKey unit: the canonical flag name for
-    ''' recognized flags, the verbatim raw text for unrecognized ones, and an empty
-    ''' string when no flag is present
+    ''' Produces the flag component of a FileKey unit. A recognized flag gets its canonical
+    ''' name, an unrecognized one gets its raw text verbatim, and a key with no flag at all
+    ''' gets an empty string
     ''' </summary>
     '''
     ''' <param name="params">

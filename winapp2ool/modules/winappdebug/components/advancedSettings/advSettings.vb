@@ -19,9 +19,7 @@ Option Strict On
 Public Module advSettings
 
     ''' <summary>
-    ''' Builds the scan/repair settings menu with all toggles and their dispatch handlers registered inline.
-    ''' Called by both <c> printMenu </c> (to render) and <c> handleUserInput </c>
-    ''' (to dispatch), so the displayed option numbers and the dispatch table are always in sync.
+    ''' Builds the scan/repair settings menu
     ''' </summary>
     Private Function buildAdvSettingsMenu() As MenuSection
 
