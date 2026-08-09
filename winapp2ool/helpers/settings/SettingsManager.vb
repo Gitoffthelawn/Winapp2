@@ -103,27 +103,34 @@ Module SettingsManager
     End Sub
 
     ''' <summary>
-    ''' 
+    ''' Inverts a Boolean setting property, marks its owning module's settings as having been changed,
+    ''' and persists both to disk
     ''' </summary>
-    ''' 
+    '''
+    ''' <remarks>
+    ''' <paramref name="settingName"/> and <paramref name="settingChangedName"/> are both resolved
+    ''' against <paramref name="settingsModule"/>, so a setting declared outside its module's settings
+    ''' type cannot be toggled here
+    ''' </remarks>
+    '''
     ''' <param name="paramText">
-    ''' 
+    ''' The name of the setting as it should be displayed to the user
     ''' </param>
-    ''' 
+    '''
     ''' <param name="callingModule">
-    ''' 
+    ''' The name of the module owning the setting as it appears in the settings file
     ''' </param>
-    ''' 
+    '''
     ''' <param name="settingsModule">
-    ''' 
+    ''' The <c> Type </c> declaring both the setting and its changed flag
     ''' </param>
-    ''' 
+    '''
     ''' <param name="settingName">
-    ''' 
+    ''' The name of the setting property as it appears in the codebase
     ''' </param>
-    ''' 
+    '''
     ''' <param name="settingChangedName">
-    ''' 
+    ''' The name of the changed flag property as it appears in the codebase
     ''' </param>
     Public Sub toggleModuleSetting(paramText As String,
                                    callingModule As String,
@@ -131,15 +138,30 @@ Module SettingsManager
                                    settingName As String,
                                    settingChangedName As String)
 
-        Dim setting = CBool(settingsModule.GetProperty(settingName).GetValue(Nothing, Nothing))
+        Dim settingProp = settingsModule.GetProperty(settingName)
+        Dim changedProp = settingsModule.GetProperty(settingChangedName)
+
+        If settingProp Is Nothing OrElse changedProp Is Nothing Then
+
+            Dim missingName = If(settingProp Is Nothing, settingName, settingChangedName)
+
+            gLog($"  {settingsModule.Name} declares no property named {missingName}")
+            setNextMenuHeaderText($"{paramText} could not be changed", printColor:=ConsoleColor.Red)
+            argIsInvalid($"{settingsModule.Name}.{missingName}")
+
+            Return
+
+        End If
+
+        Dim setting = CBool(settingProp.GetValue(Nothing, Nothing))
 
         gLog($"  Toggling {paramText} from {setting} to {Not setting}")
         setNextMenuHeaderText($"{paramText} {enStr(setting)}d", printColor:=GetRedGreen(setting))
 
         setting = Not setting
 
-        settingsModule.GetProperty(settingName).SetValue(settingName, setting)
-        settingsModule.GetProperty(settingChangedName).SetValue(settingChangedName, True)
+        settingProp.SetValue(Nothing, setting)
+        changedProp.SetValue(Nothing, True)
         SetSetting(callingModule, settingName, setting.ToString(CultureInfo.InvariantCulture))
         SetSetting(callingModule, settingChangedName, True.ToString)
 
@@ -222,6 +244,16 @@ Module SettingsManager
                                  printColor As ConsoleColor)
 
         Dim p = propertyType.GetProperty(propName)
+
+        If p Is Nothing Then
+
+            gLog($"  {propertyType.Name} declares no property named {propName}")
+            setNextMenuHeaderText($"{displayName} could not be changed", printColor:=ConsoleColor.Red)
+            argIsInvalid($"{propertyType.Name}.{propName}")
+
+            Return
+
+        End If
 
         Dim enumType = p.PropertyType
         Dim curObj = p.GetValue(Nothing)

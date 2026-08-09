@@ -32,6 +32,26 @@ Module globalsettingsmenu
     End Sub
 
     ''' <summary>
+    ''' Toggles offline mode for the remainder of the current session
+    ''' </summary>
+    '''
+    ''' <remarks>
+    ''' Offline mode is session state rather than a persisted setting, so this bypasses
+    ''' <c> toggleModuleSetting </c> and writes nothing to disk. <c> chkOfflineMode </c> recomputes it
+    ''' from the live connection at launch, and <c> -offline </c> forces it for a single run. Persisting
+    ''' it would let a stale <c> False </c> load over a connection failure detected moments earlier,
+    ''' because settings are read after the startup connection check
+    ''' </remarks>
+    Private Sub toggleOfflineMode()
+
+        gLog($"  Toggling Offline Mode from {isOffline} to {Not isOffline}")
+        setNextMenuHeaderText($"Offline Mode {enStr(isOffline)}d", printColor:=GetRedGreen(isOffline))
+
+        isOffline = Not isOffline
+
+    End Sub
+
+    ''' <summary>
     ''' Builds the Winapp2ool global settings menu
     ''' </summary>
     Private Function buildMainToolSettingsMenu() As MenuSection
@@ -54,7 +74,7 @@ Module globalsettingsmenu
                     autoUpdate()
                 End Sub) _
             .AddDispatchedToggle("Offline Mode", "forcing winapp2ool into offline mode", isOffline,
-                Sub() toggleModuleSetting(NameOf(isOffline), NameOf(Winapp2ool), GetType(maintoolsettings), NameOf(isOffline), NameOf(toolSettingsHaveChanged))).AddBlank() _
+                Sub() toggleOfflineMode()).AddBlank() _
             .AddDispatchedColoredOption("Change Flavor", "Cycle the current flavor of winapp2.ini to the next", ConsoleColor.DarkMagenta,
                 Sub() CycleEnumProperty(NameOf(CurrentWinappFlavor), "Flavor", GetType(maintoolsettings), NameOf(Winapp2ool), toolSettingsHaveChanged, NameOf(toolSettingsHaveChanged), ConsoleColor.DarkMagenta)) _
             .AddColoredLine($"Current Flavor: {CurrentWinappFlavor.ToString}", ConsoleColor.Magenta).AddBlank() _
