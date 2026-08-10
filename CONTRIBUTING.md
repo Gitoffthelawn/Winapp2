@@ -6,11 +6,11 @@ This guide covers how to add and update entries in winapp2.ini under the current
 
 ## How Winapp2.ini is maintained
 
-Winapp2.ini is no longer edited directly. Instead, it is assembled from the source files in the `Assembler/` directory by [winapp2ool](https://github.com/MoscaDotTo/Winapp2/blob/master/winapp2ool/Readme.md).
+Winapp2.ini is no longer edited directly. It is assembled from the source files in the `Assembler/` directory by [winapp2ool](https://github.com/MoscaDotTo/Winapp2/blob/master/winapp2ool/Readme.md), and building and publishing are automated. See [How Winapp2.ini is built](README.md#how-winapp2ini-is-built).
 
 **All contributions must target those source files, not any `Winapp2.ini` file directly.**
 
-Building and publishing are automated. Once your change is merged, a scheduled GitHub Actions workflow rebuilds winapp2.ini and every flavor of it from the current sources, commits the results, and cuts a tagged release with each flavor and its changelog attached. Nobody runs the build by hand, and you never need to generate any output file yourself. Only edit the source files. In practice a merged entry appears in winapp2.ini, and in a release, within a day.
+Nobody runs the build by hand, and you never need to generate any output file yourself. Only edit the source files. See [What happens after you open a PR](#what-happens-after-you-open-a-pr).
 
 ---
 
@@ -833,4 +833,4 @@ PRs that only touch `Winapp3/` get no build comment. `Winapp3.ini` is not assemb
 
 ### After merge
 
-You don't need to do anything else. A scheduled workflow rebuilds winapp2.ini and every flavor from the updated sources, commits the results, and publishes a tagged release with each flavor and its changelog attached. Typically, this is within a day of your merge.
+You don't need to do anything else. The [daily build](README.md#how-winapp2ini-is-built) picks your change up from the sources and publishes it, typically within a day of your merge.

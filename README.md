@@ -37,8 +37,8 @@ Winapp2.ini is provided as-is and without warranty. Understand that its intent i
 1. [Quick Start](#quick-start)
 2. [Files of Interest](#files-of-interest)
 3. [Installation & Configuration](INSTALL.md)
-4. [Contributing](#contributing)
-5. [How Winapp2.ini is built](#how-winapp2ini-is-built)
+4. [How Winapp2.ini is built](#how-winapp2ini-is-built)
+5. [Contributing](#contributing)
 6. [Custom Content](#custom-content)
 
 ---
@@ -78,15 +78,9 @@ It is strongly recommended you keep a copy of [winapp2ool.exe](https://github.co
 
 ---
 
-# [Contributing](#contributing)
-
-Contributions target the source files under [Assembler](Assembler), never the published winapp2.ini files. [Our contributor guidelines](CONTRIBUTING.md) cover where each kind of entry lives, the syntax rules for each, and what the automated checks will tell you after you open a pull request. Editing from the GitHub web interface is enough for most contributions; you never need to run the build or generate any output file yourself.
-
----
-
 # [How Winapp2.ini is built](#how-winapp2ini-is-built)
 
-No published winapp2.ini file in this repository is edited by hand. Every one of them, and every changelog beside it, is generated from source in [Assembler](Assembler) by [winapp2ool](winapp2ool/Readme.md), a purpose-built console application maintained alongside the database.
+No published winapp2.ini file in this repository is edited by hand. Every one of them, and every changelog beside it, is generated from source in [Assembler](Assembler) by [winapp2ool](winapp2ool/Readme.md), a purpose-built console application maintained alongside the database. Its readme covers the tool itself, and each stage below links the readme for the module that runs it.
 
 ### Build pipeline
 
@@ -99,7 +93,7 @@ Each build runs four stages, orchestrated by [`build winapp2.ps1`](Assembler/bui
 | | [UWPBuilder](winapp2ool/modules/uwpbuilder/readme.md) | Generates Microsoft Store entries from [package declarations](Assembler/UWP) and a shared scaffold |
 | Merge | [Combine](winapp2ool/modules/combine/readme.md) | Joins the generated artifacts into one file using Strict Mode, failing the build if names collide between artifacts |
 | Lint | [WinappDebug](winapp2ool/modules/winappdebug/README.md) | Static analysis over the merged file: validates syntax, enforces the style rules, and applies its own corrections |
-| Publish | [Flavorizer](winapp2ool/modules/transmute/Flavorizer/readme.md) and [Diff](winapp2ool/modules/diff/readme.md) | Applies each flavor's ruleset to derive the six variants, then generates a changelog for every output against the previously published version |
+| Publish | [Flavorizer](winapp2ool/modules/transmute/Flavorizer/readme.md) and [Diff](winapp2ool/modules/diff/readme.md) | Applies each flavor's ruleset to derive the six additional variants, then generates a changelog for every output against the previously published version |
 
 ### CI/CD
 
@@ -115,9 +109,11 @@ The build artifacts under [Assembler/Entries](Assembler/Entries) are committed t
 
 Winapp2.ini is rebuilt automatically every day, and a new version is published only when its content has changed. The version line is restamped on every daily build, so it is excluded from that comparison; otherwise an untouched rebuild would look like a change and publish an empty changelog every day.
 
-### The tooling
+---
 
-[Winapp2ool](winapp2ool/Readme.md) is a .NET Framework console application with twelve modules, usable interactively or entirely from the command line. Beyond the generators above it includes a static analyzer for winapp2.ini, a semantic diff engine that tracks renames, mergers, and key movement between entries, a structured patch engine, and a system-introspection pass that reduces the database to the entries relevant to the machine on which it is running. Its [readme](https://github.com/MoscaDotTo/Winapp2/tree/master/winapp2ool), and each module's readme, cover it in depth.
+# [Contributing](#contributing)
+
+Contributions target the source files under [Assembler](Assembler), never the published files the build produces from them. [Our contributor guidelines](CONTRIBUTING.md) cover where each kind of entry lives, the syntax rules for each, and what the automated checks will tell you after you open a pull request. Editing from the GitHub web interface is enough for most contributions; you never need to run the build or generate any output file yourself.
 
 ---
 
