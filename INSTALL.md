@@ -17,6 +17,7 @@ It is strongly recommended you keep a copy of [winapp2ool.exe](https://github.co
 7. [R-Wipe & Clean](#r-wipe--clean)
 8. [HDCleaner](#hdcleaner)
 9. [FluentCleaner](#fluentcleaner)
+10. [Reg Organizer](#reg-organizer)
 
 Each application has a preferred [flavor](README.md#what-are-flavors) of winapp2.ini. The table in [Files of interest](README.md#files-of-interest) links every published flavor and its changelog.
 
@@ -60,7 +61,7 @@ Back up your `ccleaner.ini` before your first run. Patching rewrites the file in
 
 1. Download [winapp2ool.exe](https://github.com/MoscaDotTo/Winapp2/raw/master/winapp2ool/bin/Release/winapp2ool.exe) and run it
 2. Select **CC7Patcher** from the main menu
-3. Use **Change ccleaner.ini** to point at CCleaner 7's `ccleaner.ini`, typically found in `..\Program Files\Piriform\CCleaner 7`
+3. Use **Change ccleaner.ini** to point at CCleaner 7's `ccleaner.ini`, by default this is `..\Program Files\Piriform\CCleaner 7`
 4. Optionally enable **Toggle Trim** to install only the entries relevant to your system, which reduces CCleaner's startup time
 5. Select **Run**
 
@@ -80,7 +81,9 @@ You will also need to run it again after every CCleaner 7 update, as updating ov
 
 ### Configuration
 
-CCleaner 7 will display the winapp2.ini entries it detects as valid for your system alongside its own cleaning options. All winapp2.ini entries are disabled by default and must be enabled individually or in groups.
+CCleaner 7 will display the winapp2.ini entries it detects as valid for your system alongside its own cleaning options in the Custom Clean interface. All winapp2.ini entries are disabled by default and must be enabled individually or in groups.
+
+All winapp2.ini entries are identified with a `custom-clean.name.` prefix which cannot be disabled or removed. This is a CCleaner 7 feature and not a winapp2.ini feature. There is no way to increase the width of the entry list, so to see the full name of an entry you must hover your mouse over it. Entries are sorted alphabetically, *ignoring* this prefix.
 
 ###### Note: CC7Patcher identifies the entries it installed by their `Author=Winapp2.ini Project` key, and removes them on the next run. If you customize a winapp2.ini entry inside `ccleaner.ini`, delete that key from your copy so your changes survive updating.
 
@@ -90,7 +93,9 @@ CCleaner 7 will display the winapp2.ini entries it detects as valid for your sys
 
 ### Flavor
 
-You should use the [BleachBit flavor](https://raw.githubusercontent.com/MoscaDotTo/Winapp2/master/Non-CCleaner/BleachBit/Winapp2.ini). This flavor is designed to improve compatibility with BleachBit by eliminating errors thrown by BleachBit's sanity checker when using the base winapp2.ini. Use of any other flavor will throw a small number of errors and not allow you to run any entries which contain them, but will otherwise function correctly.
+**BleachBit 5 or earlier:** You should use the [BleachBit flavor](https://raw.githubusercontent.com/MoscaDotTo/Winapp2/master/Non-CCleaner/BleachBit/Winapp2.ini), which removes registry exclusions not supported by BleachBit before version 6. Using any other flavor will throw a small number of errors and not allow you to run the entries which contain them, but will otherwise function correctly.
+
+**BleachBit 6 or newer:** You should use the base [winapp2.ini](https://raw.githubusercontent.com/MoscaDotTo/Winapp2/master/Non-CCleaner/Winapp2.ini)
 
 ### Installation
 
@@ -101,6 +106,8 @@ Likewise, BleachBit maintains their own [customized version of winapp2.ini](http
 1. Open BleachBit.
 2. Select the "Edit" tab, and then "Preferences".
 3. Check the box that reads "Download and update cleaners from community (Winapp2.ini)".
+
+###### Note: Using BleachBit's winapp2.ini will overwrite any existing local file.
 
 ### Configuration
 
@@ -116,7 +123,7 @@ BleachBit will display the set of winapp2.ini entries which it detects as both h
 You should use the [System Ninja Flavor](https://raw.githubusercontent.com/MoscaDotTo/Winapp2/master/Non-CCleaner/SystemNinja/Winapp2.rules). This flavor is designed to improve compatibility with System Ninja by replacing keys with unsupported features, such that they become functional in System Ninja. It is not advised you use any other flavor with System Ninja.
 
 ### Installation
-System Ninja ships with a copy Winapp2.ini by default, served from their servers, storing it in your `..\System Ninja\scripts\` directory as `winapp2.rules`
+System Ninja ships with a copy of Winapp2.ini by default, served from their servers, storing it in your `..\System Ninja\scripts\` directory as `winapp2.rules`
 
 To keep your system ninja winapp2.rules up to date with winapp2.ini using winapp2ool instead:
 1. Open System Ninja
@@ -140,7 +147,7 @@ System Ninja does not provide an interface for individually configuring which wi
 You should use the base [winapp2.ini](https://raw.githubusercontent.com/MoscaDotTo/Winapp2/master/Non-CCleaner/Winapp2.ini)
 
 ### Installation
-Avira System Speedup ships with a copy Winapp2.ini by default, served by Avira, storing it in your `..\Avira\System Speedup\sdf` directory. You can replace or update this local copy without issue or changing any of the Avira System Speedup settings.
+Avira System Speedup ships with a copy of Winapp2.ini by default, served by Avira, storing it in your `..\Avira\System Speedup\sdf` directory. You can replace or update this local copy without issue or changing any of the Avira System Speedup settings.
 
 ### Configuration
 
@@ -230,11 +237,29 @@ You should use the [FluentCleaner flavor](https://raw.githubusercontent.com/Mosc
 
 ### Installation
 
-FluentCleaner ships with a copy winapp2.ini in the same folder as `FCleaner.exe` or `FluentCleaner.Classic.exe`. You can update winapp2.ini by replacing this file.
+FluentCleaner ships with a copy of winapp2.ini in the same folder as `FCleaner.exe` or `FluentCleaner.Classic.exe`. You can update winapp2.ini by replacing this file yourself.
 
 ### Configuration
 
 Almost all winapp2.ini entries are enabled by default in FluentCleaner when using their winapp2.ini or the FluentCleaner flavor. Click their checkbox to disable.
+
+## Reg Organizer
+
+###### [Download Reg Organizer](https://www.chemtable.com/organizer.htm)
+
+###### ChemTable also provides their own information about winapp2.ini [here](https://www.chemtable.com/blog/en/community-driven-cleanup.htm)
+
+### Flavor
+
+You should use the base [winapp2.ini](https://raw.githubusercontent.com/MoscaDotTo/Winapp2/master/Non-CCleaner/Winapp2.ini)
+
+### Installation
+
+Reg Organizer ships with a copy of winapp2.ini maintained by ChemTable. By default, this is located in `..\AppData\Roaming\ChemTable Software\Reg Organizer\CleanupDatabases`. Replace the winapp2.ini file found here with the one from this repo to update it yourself. Be aware that Reg Organizer may replace this file when updating.
+
+### Configuration
+
+From the left hand toolbar, select the *Miscellaneous Tools* drop down. From the resulting list, select *Community-Driven Cleanup*. All entries are scanned by default, so make sure to carefully review the results before selecting which to delete.
 
 ---
 
