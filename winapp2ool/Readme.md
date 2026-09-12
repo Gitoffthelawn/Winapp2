@@ -4,7 +4,7 @@ Winapp2ool is the tool that builds winapp2.ini, and a companion utility for the 
 
 ### What is winapp2.ini?
 
-Winapp2.ini is a massive, community-driven database of declarative cleaning routines for Microsoft Windows, compatible with CCleaner, BleachBit, System Ninja, R-Wipe&Clean, HDCleaner, and FluentCleaner. Winapp2.ini has its own readme [here](../README.md).
+Winapp2.ini is a massive, community-driven database of declarative cleaning routines for Microsoft Windows, compatible with CCleaner, BleachBit, System Ninja, Avira System Speedup, R-Wipe&Clean, HDCleaner, FluentCleaner, and Reg Organizer. Winapp2.ini has its own readme [here](../README.md).
 
 ### Why winapp2ool?
 
@@ -172,7 +172,7 @@ Click a linked option name to see the readme for that module.
 
 Winapp2ool supports command line arguments ("args"). These allow Winapp2ool to be used from a scripting environment (such as a shell script) without having to interact with the UI. There are several top level args which apply settings globally, and then there are tool specific args which are defined in each tool's own readme.
 
-The first argument provided should always refer to the module you would like to use, as below. Modules can be selected by number or by name, with or without a leading `-` — `1`, `-1`, `debug`, and `-debug` are all equivalent.
+The first argument provided should always refer to the module you would like to use, as below. Modules can be selected by number or by name, with or without a leading `-`. `1`, `-1`, `debug`, and `-debug` are all equivalent.
 
 ### Module Args
 
